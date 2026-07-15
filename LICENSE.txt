@@ -1,0 +1,2 @@
+This project is provided for personal, non-commercial use without warranty.
+Movie metadata and images are supplied by TMDb and remain subject to TMDb terms.

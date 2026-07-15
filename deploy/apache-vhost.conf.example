@@ -1,0 +1,14 @@
+<VirtualHost *:80>
+    ServerName film.pelda.hu
+    DocumentRoot /var/www/movie-night/public
+
+    <Directory /var/www/movie-night/public>
+        AllowOverride All
+        Require all granted
+        DirectoryIndex index.php
+    </Directory>
+
+    <FilesMatch "\.(sqlite|db|ini|log)$">
+        Require all denied
+    </FilesMatch>
+</VirtualHost>

@@ -1,0 +1,21 @@
+server {
+    listen 80;
+    server_name film.pelda.hu;
+
+    root /var/www/movie-night/public;
+    index index.php;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php8.2-fpm.sock;
+    }
+
+    location ~ /\. { deny all; }
+    location ~* \.(sqlite|db|ini|log)$ { deny all; }
+
+    client_max_body_size 2m;
+}
