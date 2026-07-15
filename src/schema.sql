@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS movies (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     tmdb_id INTEGER NOT NULL,
+    media_type TEXT NOT NULL DEFAULT 'movie' CHECK(media_type IN ('movie','tv')),
     title TEXT NOT NULL,
     original_title TEXT,
     release_date TEXT,
@@ -35,7 +36,7 @@ CREATE TABLE IF NOT EXISTS movies (
     added_by INTEGER NOT NULL,
     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     watched_at TEXT,
-    UNIQUE(group_id,tmdb_id),
+    UNIQUE(group_id,media_type,tmdb_id),
     FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
     FOREIGN KEY(added_by) REFERENCES users(id)
 );
