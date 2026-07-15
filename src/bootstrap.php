@@ -102,6 +102,7 @@ function migrate_schema(PDO $pdo): void
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
                     group_id INTEGER NOT NULL,
                     tmdb_id INTEGER NOT NULL,
+                    media_type TEXT NOT NULL DEFAULT 'movie' CHECK(media_type IN ('movie','tv')),
                     title TEXT NOT NULL,
                     original_title TEXT,
                     release_date TEXT,
@@ -111,12 +112,12 @@ function migrate_schema(PDO $pdo): void
                     added_by INTEGER NOT NULL,
                     added_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     watched_at TEXT,
-                    UNIQUE(group_id,tmdb_id),
+                    UNIQUE(group_id,media_type,tmdb_id),
                     FOREIGN KEY(group_id) REFERENCES groups(id) ON DELETE CASCADE,
                     FOREIGN KEY(added_by) REFERENCES users(id)
                 )");
-                $stmt = $pdo->prepare("INSERT INTO movies_new(id,group_id,tmdb_id,title,original_title,release_date,poster_path,overview,status,added_by,added_at,watched_at)
-                    SELECT id,?,tmdb_id,title,original_title,release_date,poster_path,overview,status,added_by,added_at,watched_at FROM movies");
+                $stmt = $pdo->prepare("INSERT INTO movies_new(id,group_id,tmdb_id,media_type,title,original_title,release_date,poster_path,overview,status,added_by,added_at,watched_at)
+                    SELECT id,?,tmdb_id,'movie',title,original_title,release_date,poster_path,overview,status,added_by,added_at,watched_at FROM movies");
                 $stmt->execute([$defaultGroup]);
                 $pdo->exec('DROP TABLE movies');
                 $pdo->exec('ALTER TABLE movies_new RENAME TO movies');
@@ -129,6 +130,11 @@ function migrate_schema(PDO $pdo): void
             }
         }
     }
+
+    if (!table_has_column($pdo, 'movies', 'media_type')) {
+        $pdo->exec("ALTER TABLE movies ADD COLUMN media_type TEXT NOT NULL DEFAULT 'movie' CHECK(media_type IN ('movie','tv'))");
+    }
+    $pdo->exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_movies_group_media_tmdb ON movies(group_id,media_type,tmdb_id)');
 
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_movies_group_status ON movies(group_id,status)');
     $pdo->exec('CREATE INDEX IF NOT EXISTS idx_movies_added_at ON movies(added_at)');

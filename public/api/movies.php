@@ -13,4 +13,4 @@ WHERE m.group_id=:gid";
 $params=[':uid1'=>(int)$user['id'],':uid2'=>(int)$user['id'],':gid'=>(int)$user['group_id']];
 if(in_array($status,['watchlist','watched','favorite'],true)){ $sql.=' AND m.status=:status'; $params[':status']=$status; }
 $sql.=' GROUP BY m.id ORDER BY CASE m.status WHEN "favorite" THEN 1 WHEN "watchlist" THEN 2 ELSE 3 END,m.added_at DESC';
-$stmt=db()->prepare($sql); $stmt->execute($params); $movies=$stmt->fetchAll(); foreach($movies as &$m)$m['poster_url']=poster_url($m['poster_path']?:null); json_response(['movies'=>$movies]);
+$stmt=db()->prepare($sql); $stmt->execute($params); $movies=$stmt->fetchAll(); foreach($movies as &$m){$m['poster_url']=poster_url($m['poster_path']?:null);$m['media_type']=$m['media_type']?:'movie';} json_response(['movies'=>$movies]);
