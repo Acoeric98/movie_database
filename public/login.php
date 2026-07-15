@@ -20,4 +20,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body class="auth-page"><main class="auth-card"><div class="logo">🎬</div><h1>Movie Night</h1><p class="muted">Közös filmlista</p>
 <?php if (isset($_GET['installed'])): ?><div class="alert success">Telepítés kész. Jelentkezz be!</div><?php endif; ?>
 <?php if ($error): ?><div class="alert error"><?= htmlspecialchars($error) ?></div><?php endif; ?>
-<form method="post"><label>Felhasználónév<input name="username" autocomplete="username" required autofocus></label><label>Jelszó<input type="password" name="password" autocomplete="current-password" required></label><button class="primary" type="submit">Belépés</button></form></main></body></html>
+<form method="post"><label>Felhasználónév<input name="username" autocomplete="username" required autofocus></label><label>Jelszó<input type="password" name="password" autocomplete="current-password" required></label><button class="primary" type="submit">Belépés</button></form><p class="auth-switch">Nincs még fiókod? <a href="/register.php">Regisztráció</a></p></main></body></html>

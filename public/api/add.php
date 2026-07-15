@@ -1,12 +1,5 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
-require_installation(); $user=require_login(true); verify_csrf(); $d=request_json();
-$id=(int)($d['tmdb_id']??0); if($id<1) json_response(['error'=>'Érvénytelen film.'],422);
-try {
-    $details=tmdb_request('movie/'.$id,['language'=>'hu-HU']);
-    $stmt=db()->prepare('INSERT INTO movies (tmdb_id,title,original_title,release_date,poster_path,overview,status,added_by) VALUES (?,?,?,?,?,?,?,?)');
-    $stmt->execute([$id,$details['title']??$details['original_title']??'Ismeretlen',$details['original_title']??'', $details['release_date']??'', $details['poster_path']??null,$details['overview']??'','watchlist',(int)$user['id']]);
-    json_response(['ok'=>true],201);
-} catch(PDOException $e){ if(str_contains($e->getMessage(),'UNIQUE')) json_response(['error'=>'Ez a film már szerepel a listán.'],409); json_response(['error'=>'Adatbázishiba.'],500);
-} catch(Throwable $e){json_response(['error'=>$e->getMessage()],502);}
+require_installation(); $user=require_login(true); verify_csrf(); $d=request_json(); $id=(int)($d['tmdb_id']??0); if($id<1)json_response(['error'=>'Érvénytelen film.'],422);
+try{$details=tmdb_request('movie/'.$id,['language'=>'hu-HU']);$stmt=db()->prepare('INSERT INTO movies(group_id,tmdb_id,title,original_title,release_date,poster_path,overview,status,added_by) VALUES(?,?,?,?,?,?,?,?,?)');$stmt->execute([(int)$user['group_id'],$id,$details['title']??$details['original_title']??'Ismeretlen',$details['original_title']??'',$details['release_date']??'',$details['poster_path']??null,$details['overview']??'','watchlist',(int)$user['id']]);json_response(['ok'=>true],201);}catch(PDOException $e){if(str_contains($e->getMessage(),'UNIQUE'))json_response(['error'=>'Ez a film már szerepel ezen a listán.'],409);json_response(['error'=>'Adatbázishiba.'],500);}catch(Throwable $e){json_response(['error'=>$e->getMessage()],502);}

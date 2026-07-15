@@ -1,12 +1,6 @@
 <?php
 declare(strict_types=1);
 require __DIR__ . '/../../src/bootstrap.php';
-require_installation(); $user=require_login(true); verify_csrf(); $d=request_json(); $id=(int)($d['id']??0);
-if($id<1) json_response(['error'=>'Érvénytelen azonosító.'],422);
-$pdo=db();
-try{
- $pdo->beginTransaction();
- if(isset($d['status'])){ $status=(string)$d['status']; if(!in_array($status,['watchlist','watched','favorite'],true)) throw new RuntimeException('Érvénytelen állapot.'); $stmt=$pdo->prepare('UPDATE movies SET status=?, watched_at=CASE WHEN ?="watched" THEN COALESCE(watched_at,CURRENT_TIMESTAMP) ELSE watched_at END WHERE id=?'); $stmt->execute([$status,$status,$id]); }
- if(array_key_exists('rating',$d)||array_key_exists('note',$d)){ $rating=$d['rating']===null||$d['rating']===''?null:(int)$d['rating']; if($rating!==null&&($rating<1||$rating>10)) throw new RuntimeException('Az értékelés 1–10 lehet.'); $note=mb_substr(trim((string)($d['note']??'')),0,1000); $stmt=$pdo->prepare('INSERT INTO ratings(movie_id,user_id,rating,note,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(movie_id,user_id) DO UPDATE SET rating=excluded.rating,note=excluded.note,updated_at=CURRENT_TIMESTAMP'); $stmt->execute([$id,(int)$user['id'],$rating,$note]); }
- $pdo->commit(); json_response(['ok'=>true]);
-}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>$e->getMessage()],422);}
+require_installation(); $user=require_login(true); verify_csrf(); $d=request_json(); $id=(int)($d['id']??0); if($id<1)json_response(['error'=>'Érvénytelen azonosító.'],422);
+$pdo=db();$check=$pdo->prepare('SELECT 1 FROM movies WHERE id=? AND group_id=?');$check->execute([$id,(int)$user['group_id']]);if(!$check->fetchColumn())json_response(['error'=>'A film nem található ezen a listán.'],404);
+try{$pdo->beginTransaction();if(isset($d['status'])){$status=(string)$d['status'];if(!in_array($status,['watchlist','watched','favorite'],true))throw new RuntimeException('Érvénytelen állapot.');$stmt=$pdo->prepare('UPDATE movies SET status=?,watched_at=CASE WHEN ?="watched" THEN COALESCE(watched_at,CURRENT_TIMESTAMP) ELSE watched_at END WHERE id=? AND group_id=?');$stmt->execute([$status,$status,$id,(int)$user['group_id']]);}if(array_key_exists('rating',$d)||array_key_exists('note',$d)){$rating=$d['rating']===null||$d['rating']===''?null:(int)$d['rating'];if($rating!==null&&($rating<1||$rating>10))throw new RuntimeException('Az értékelés 1–10 lehet.');$note=mb_substr(trim((string)($d['note']??'')),0,1000);$stmt=$pdo->prepare('INSERT INTO ratings(movie_id,user_id,rating,note,updated_at) VALUES(?,?,?,?,CURRENT_TIMESTAMP) ON CONFLICT(movie_id,user_id) DO UPDATE SET rating=excluded.rating,note=excluded.note,updated_at=CURRENT_TIMESTAMP');$stmt->execute([$id,(int)$user['id'],$rating,$note]);}$pdo->commit();json_response(['ok'=>true]);}catch(Throwable $e){if($pdo->inTransaction())$pdo->rollBack();json_response(['error'=>$e->getMessage()],422);}

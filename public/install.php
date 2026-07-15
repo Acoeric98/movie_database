@@ -40,9 +40,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo = db();
         $pdo->exec((string) file_get_contents(__DIR__ . '/../src/schema.sql'));
+        $pdo->beginTransaction();
         $stmt = $pdo->prepare('INSERT INTO users (username, display_name, password_hash) VALUES (?, ?, ?)');
         $stmt->execute([$user1, $name1 ?: $user1, password_hash($pass1, PASSWORD_DEFAULT)]);
+        $uid1 = (int) $pdo->lastInsertId();
         $stmt->execute([$user2, $name2 ?: $user2, password_hash($pass2, PASSWORD_DEFAULT)]);
+        $uid2 = (int) $pdo->lastInsertId();
+        $code = random_invite_code($pdo);
+        $stmt = $pdo->prepare("INSERT INTO groups(name,mode,invite_code,created_by) VALUES('Közös filmlista','couple',?,?)");
+        $stmt->execute([$code, $uid1]);
+        $gid = (int) $pdo->lastInsertId();
+        $member = $pdo->prepare('INSERT INTO group_members(group_id,user_id,role) VALUES(?,?,?)');
+        $member->execute([$gid,$uid1,'owner']);
+        $member->execute([$gid,$uid2,'member']);
+        $pdo->commit();
 
         header('Location: /login.php?installed=1');
         exit;
