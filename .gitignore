@@ -1,0 +1,29 @@
+# Local runtime data and secrets
+/data/*
+!/data/.gitkeep
+
+# Local configuration
+.env
+.env.*
+config.php
+
+# SQLite databases
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm
+
+# Logs and temporary files
+*.log
+tmp/
+temp/
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
