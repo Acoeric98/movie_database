@@ -8,6 +8,7 @@ const grid = $('#movieGrid');
 const emptyState = $('#emptyState');
 const movieCount = $('#movieCount');
 const localFilter = $('#localFilter');
+const sortMovies = $('#sortMovies');
 const popularGrid = $('#popularGrid');
 const toast = $('#toast');
 const detailsModal = $('#detailsModal');
@@ -100,15 +101,27 @@ document.querySelectorAll('[data-popular-type]').forEach(btn => btn.addEventList
 async function loadMovies() { try { const data = await api(`/api/movies.php?status=${encodeURIComponent(currentStatus)}`); movies = data.movies || []; renderMovies(); } catch (e) { notify(e.message, 'error'); } }
 function renderMovies() {
   const q = localFilter.value.trim().toLocaleLowerCase('hu-HU');
-  const filtered = movies.filter(m => (`${m.title} ${m.original_title || ''}`).toLocaleLowerCase('hu-HU').includes(q));
+  const filtered = movies
+    .filter(m => (`${m.title} ${m.original_title || ''}`).toLocaleLowerCase('hu-HU').includes(q))
+    .sort(movieSorter(sortMovies?.value || 'added_desc'));
   movieCount.textContent = `${filtered.length} cím`; emptyState.classList.toggle('hidden', filtered.length > 0);
   grid.innerHTML = filtered.map(m => `<article class="movie-card" data-id="${m.id}"><div class="card-poster">${poster(m.poster_url, m.title)}<span class="status-badge ${m.status}">${statusText(m.status)}</span></div><div class="card-body"><h3>${escapeHtml(m.title)}</h3><div class="meta">${mediaLabel(m.media_type)} · ${year(m.release_date)}${m.original_title && m.original_title !== m.title ? ` · ${escapeHtml(m.original_title)}` : ''}</div><p class="overview">${escapeHtml(m.overview || 'Nincs elérhető leírás.')}</p><div class="added">Hozzáadta: ${escapeHtml(m.added_by_name)}</div><label>Állapot<select data-status-select><option value="watchlist" ${m.status === 'watchlist' ? 'selected' : ''}>Megnézendő</option><option value="watched" ${m.status === 'watched' ? 'selected' : ''}>Megnézve</option><option value="favorite" ${m.status === 'favorite' ? 'selected' : ''}>Kedvenc</option></select></label><div class="rating-row"><label>Saját pontszám<input data-rating type="number" min="1" max="10" placeholder="1–10" value="${m.my_rating || ''}"></label><span class="average">Közös átlag: <b>${m.avg_rating || '–'}</b></span></div><label>Megjegyzésem<textarea data-note maxlength="1000" placeholder="Pl. hétvégén nézzük meg…">${escapeHtml(m.my_note || '')}</textarea></label><div class="card-actions"><button class="primary compact" data-save>Mentés</button><button class="danger compact" data-delete>Törlés</button></div></div></article>`).join('');
   bindCards();
+}
+function movieSorter(mode) {
+  const textCompare = (a, b) => a.title.localeCompare(b.title, 'hu-HU', {sensitivity: 'base'});
+  return (a, b) => {
+    if (mode === 'title_asc') return textCompare(a, b);
+    if (mode === 'year_desc') return (Number(year(b.release_date)) || 0) - (Number(year(a.release_date)) || 0) || textCompare(a, b);
+    if (mode === 'rating_desc') return (Number(b.avg_rating) || 0) - (Number(a.avg_rating) || 0) || textCompare(a, b);
+    return Number(b.id) - Number(a.id);
+  };
 }
 function statusText(status) { return ({watchlist:'Megnézendő', watched:'Megnézve', favorite:'Kedvenc'})[status] || status; }
 function bindCards() { grid.querySelectorAll('.movie-card').forEach(card => { const id = Number(card.dataset.id); card.querySelector('[data-status-select]').addEventListener('change', async e => { try { await updateMovie(id, {status: e.target.value}); notify('Állapot frissítve.'); await loadMovies(); } catch (err) { notify(err.message, 'error'); } }); card.querySelector('[data-save]').addEventListener('click', async () => { const rating = card.querySelector('[data-rating]').value; const note = card.querySelector('[data-note]').value; try { await updateMovie(id, {rating: rating === '' ? null : Number(rating), note}); notify('Értékelés elmentve.'); await loadMovies(); } catch (err) { notify(err.message, 'error'); } }); card.querySelector('[data-delete]').addEventListener('click', async () => { if (!confirm('Biztosan törlitek ezt a címet a közös listáról?')) return; try { await api('/api/delete.php', {method:'POST', body:JSON.stringify({id})}); notify('Cím törölve.'); await loadMovies(); } catch (err) { notify(err.message, 'error'); } }); }); }
 function updateMovie(id, data) { return api('/api/update.php', {method:'POST', body:JSON.stringify({id, ...data})}); }
 document.querySelectorAll('.tabs [data-status]').forEach(btn => btn.addEventListener('click', async () => { document.querySelectorAll('.tabs [data-status]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); currentStatus = btn.dataset.status; await loadMovies(); }));
 localFilter.addEventListener('input', renderMovies);
+if (sortMovies) sortMovies.addEventListener('change', renderMovies);
 $('#randomBtn').addEventListener('click', async () => { try { const {movie} = await api('/api/random.php'); alert(`🎲 A mai cím:\n\n${movie.title} (${year(movie.release_date)})`); } catch (e) { notify(e.message, 'error'); } });
 loadMovies(); loadPopular();
