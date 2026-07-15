@@ -15,5 +15,6 @@ $config = load_config();
 <section id="movieGrid" class="movie-grid"></section>
 <div id="emptyState" class="empty hidden"><div>🍿</div><h3>Még nincs itt film</h3><p>Keress rá fent, és add hozzá a listához.</p></div>
 </main>
+<div id="detailsModal" class="details-modal hidden" aria-hidden="true"><div id="detailsBackdrop" class="details-backdrop"></div><section class="details-dialog" role="dialog" aria-modal="true" aria-label="Ajánlott cím részletei"><button id="detailsClose" class="details-close" aria-label="Részletek bezárása">×</button><div id="detailsBody" class="details-body"></div></section></div>
 <div id="toast" class="toast"></div>
 <script>window.APP={csrf:<?= json_encode(csrf_token()) ?>,userId:<?= (int)$user['id'] ?>};</script><script src="/assets/app.js"></script></body></html>

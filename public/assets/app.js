@@ -10,6 +10,10 @@ const movieCount = $('#movieCount');
 const localFilter = $('#localFilter');
 const popularGrid = $('#popularGrid');
 const toast = $('#toast');
+const detailsModal = $('#detailsModal');
+const detailsBackdrop = $('#detailsBackdrop');
+const detailsClose = $('#detailsClose');
+const detailsBody = $('#detailsBody');
 let searchTimer = null;
 let searchAbort = null;
 let currentStatus = 'all';
@@ -22,6 +26,8 @@ async function api(url, options = {}) { const headers = {'Accept': 'application/
 function year(date) { return date ? date.slice(0, 4) : '–'; }
 function mediaLabel(type) { return type === 'tv' ? 'Sorozat' : 'Film'; }
 function poster(url, title) { return url ? `<img src="${escapeHtml(url)}" alt="${escapeHtml(title)} posztere" loading="lazy">` : '<div class="poster-placeholder">🎞️</div>'; }
+function displayTitles(m) { const original = m.original_title && m.original_title !== m.title ? `<span>Angol/eredeti: ${escapeHtml(m.original_title)}</span>` : ''; return `<strong>Magyar: ${escapeHtml(m.title)}</strong>${original}`; }
+function largePosterUrl(url) { return url ? url.replace('/t/p/w185', '/t/p/w500').replace('/t/p/w342', '/t/p/w500') : ''; }
 
 searchInput.addEventListener('input', () => { clearTimeout(searchTimer); const q = searchInput.value.trim(); if (q.length < 2) { searchResults.innerHTML = ''; return; } searchTimer = setTimeout(() => searchMovies(q), 350); });
 searchInput.addEventListener('keydown', e => { if (e.key === 'Escape') searchResults.innerHTML = ''; });
@@ -69,10 +75,25 @@ async function loadPopular() {
   popularGrid.innerHTML = '<div class="muted">Ajánlók betöltése…</div>';
   try {
     const data = await api(`/api/popular.php?type=${popularType}`);
-    popularGrid.innerHTML = (data.results || []).map(m => `<article class="popular-card"><div class="popular-poster">${poster(m.poster_url, m.title)}</div><strong>${escapeHtml(m.title)}</strong><small>${mediaLabel(m.media_type)} · ${year(m.release_date)} · TMDb ${m.vote_average || '–'}</small><button class="primary compact" data-popular-add="${m.tmdb_id}" data-type="${m.media_type}">+ Lista</button></article>`).join('');
+    popularGrid.innerHTML = (data.results || []).map(m => `<article class="popular-card"><button class="popular-poster poster-button" data-popular-details="${m.tmdb_id}" aria-label="${escapeHtml(m.title)} borítójának nagyítása és részletei">${poster(m.poster_url, m.title)}</button><div class="popular-title">${displayTitles(m)}</div><small>${mediaLabel(m.media_type)} · ${year(m.release_date)} · TMDb ${m.vote_average || '–'}</small><p class="popular-overview">${escapeHtml(m.overview || 'Nincs magyar leírás.')}</p><div class="popular-actions"><button class="ghost compact" data-popular-details="${m.tmdb_id}">Részletek</button><button class="primary compact" data-popular-add="${m.tmdb_id}" data-type="${m.media_type}">+ Lista</button></div></article>`).join('');
     popularGrid.querySelectorAll('[data-popular-add]').forEach(btn => btn.addEventListener('click', async () => addTitle(btn, Number(btn.dataset.popularAdd), btn.dataset.type)));
+    popularGrid.querySelectorAll('[data-popular-details]').forEach(btn => btn.addEventListener('click', () => openDetails((data.results || []).find(m => Number(m.tmdb_id) === Number(btn.dataset.popularDetails)))));
   } catch (e) { popularGrid.innerHTML = `<div class="no-result">${escapeHtml(e.message)}</div>`; }
 }
+
+
+function openDetails(m) {
+  if (!m || !detailsModal) return;
+  const posterLarge = largePosterUrl(m.poster_url);
+  detailsBody.innerHTML = `<div class="details-poster">${posterLarge ? `<img src="${escapeHtml(posterLarge)}" alt="${escapeHtml(m.title)} nagyított borítója">` : '<div class="poster-placeholder">🎞️</div>'}</div><div class="details-info"><div class="popular-title details-title">${displayTitles(m)}</div><div class="meta">${mediaLabel(m.media_type)} · ${year(m.release_date)} · TMDb ${m.vote_average || '–'}</div><p>${escapeHtml(m.overview || 'Nincs magyar leírás.')}</p><button class="primary" data-modal-add="${m.tmdb_id}" data-type="${m.media_type}">+ Hozzáadás a listához</button></div>`;
+  detailsModal.classList.remove('hidden');
+  detailsModal.setAttribute('aria-hidden', 'false');
+  detailsBody.querySelector('[data-modal-add]').addEventListener('click', async e => addTitle(e.currentTarget, Number(e.currentTarget.dataset.modalAdd), e.currentTarget.dataset.type));
+}
+function closeDetails() { if (!detailsModal) return; detailsModal.classList.add('hidden'); detailsModal.setAttribute('aria-hidden', 'true'); }
+if (detailsClose) detailsClose.addEventListener('click', closeDetails);
+if (detailsBackdrop) detailsBackdrop.addEventListener('click', closeDetails);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetails(); });
 
 document.querySelectorAll('[data-popular-type]').forEach(btn => btn.addEventListener('click', async () => { document.querySelectorAll('[data-popular-type]').forEach(b => b.classList.remove('active')); btn.classList.add('active'); popularType = btn.dataset.popularType; await loadPopular(); }));
 
